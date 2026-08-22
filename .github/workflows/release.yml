@@ -67,6 +67,7 @@ jobs:
             runner: ubuntu-24.04-arm
             image: alpine:3.20
     runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v7
       - name: Exercise the Windows installer under PowerShell
@@ -81,7 +82,7 @@ jobs:
         with:
           path: downloads
           key: vdpm-downloads-${{ hashFiles('cmake/PackageClientVersions.cmake') }}
-      - name: Build, bundle and validate inside ${{ matrix.image }}
+      - name: Build, bundle and validate
         shell: bash
         env:
           SOURCE_DATE_EPOCH: ${{ needs.prepare.outputs.source_date_epoch }}
@@ -89,14 +90,7 @@ jobs:
           VDPM_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           mkdir -p release downloads
-          docker run --rm \
-            -v "$PWD":/src:ro \
-            -v "$PWD/release":/release \
-            -v "$PWD/downloads":/downloads \
-            -e SOURCE_DATE_EPOCH -e VDPM_HOST -e VDPM_VERSION \
-            -e VDPM_REVISION='${{ github.sha }}' \
-            -e VDPM_DOWNLOAD_DIR=/downloads \
-            '${{ matrix.image }}' /src/scripts/build-in-linux-container.sh
+          scripts/build-and-bundle.sh . "$PWD"
       - uses: actions/upload-artifact@v7
         with:
           name: vdpm-${{ matrix.host }}
